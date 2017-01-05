@@ -2,6 +2,9 @@ var express = require('express');
 
 var app = express();
 
+//幸运句
+var fortune = require('./lib/fortune.js')
+
 //指定端口号，这样可以在启动服务器前通过设置环境变量覆盖端口
 //如果运行时不时3000，检查一下是否设置了环境变量PORT
 app.set('port', process.env.port || 3000);
@@ -16,7 +19,16 @@ var handlebars = require('express3-handlebars').create({ defaultLayout: 'main'})
 app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
 
-//配置路由，get方式请求
+//使用中间件来检测查询字符串中的test=1.应该放在定义的所有的路由之前
+//这里访问http://localhost:3000?test=1 将加载包含测试的首页
+app.use(function (req, res, next) {
+	// 不是运行在生产服务器上，这里会反回一个false或true
+	res.locals.showTests = app.get('env') !== 'production' && req.query.test === '1';
+	next();
+})
+
+
+//配置路由，get方式请求,首页
 app.get('/', function (req, res) {
 	// res.type('text/plain');
 	// //res.send在node的res.end上的封装的方法
@@ -25,23 +37,24 @@ app.get('/', function (req, res) {
 	res.render('home');
 })
 
-
-//在about也页面上显示的幸运话
-var fortunes = [
-	"Conquer your fears or they will conquer you.",
-	"Rivers need springs.",
-	"Do not fear what you don't konow",
-	"You will have a pleasant surprise",
-	"wheneven possible, keep is simple"
-];
-
-
 app.get('/about', function (req, res) {
 	// res.type('text/plain');
 	// res.send('About Meadowlark Travel');
-	var randomFortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+	
 	//渲染到页面
-	res.render('about', { fortune: randomFortune });
+	res.render('about', { 
+		fortune: fortune.getFortune(),
+		pageTestScript: '/qa/tests-about.js'
+	});
+
+})
+
+app.get('/tours/hood-river', function (req, res) {
+	res.render('tours/hood-river');
+})
+
+app.get('/tours/request-group-rate', function (req, res) {
+	res.render('tours/request-group-rate');
 })
 
 
