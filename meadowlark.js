@@ -15,7 +15,17 @@ app.set('port', process.env.port || 3000);
 app.use(express.static(__dirname + '/public'))
 
 // 设置handlebars视图引擎,默认视图为main
-var handlebars = require('express3-handlebars').create({ defaultLayout: 'main'});
+var handlebars = require('express3-handlebars').create({ 
+	defaultLayout: 'main',
+	helpers: {//添加一个section辅助方法
+		section: function (name, options) {
+			if(!this._sections) this._sections = {};
+			this._sections[name] = options.fn(this);
+			return null;
+		}
+	}
+});
+
 app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
 
@@ -27,6 +37,40 @@ app.use(function (req, res, next) {
 	next();
 })
 
+// 天气数据
+function getWeatherData(){
+    return {
+        locations: [
+            {
+                name: 'Portland',
+                forecastUrl: 'http://www.wunderground.com/US/OR/Portland.html',
+                iconUrl: 'http://icons-ak.wxug.com/i/c/k/cloudy.gif',
+                weather: 'Overcast',
+                temp: '54.1 F (12.3 C)',
+            },
+            {
+                name: 'Bend',
+                forecastUrl: 'http://www.wunderground.com/US/OR/Bend.html',
+                iconUrl: 'http://icons-ak.wxug.com/i/c/k/partlycloudy.gif',
+                weather: 'Partly Cloudy',
+                temp: '55.0 F (12.8 C)',
+            },
+            {
+                name: 'Manzanita',
+                forecastUrl: 'http://www.wunderground.com/US/OR/Manzanita.html',
+                iconUrl: 'http://icons-ak.wxug.com/i/c/k/rain.gif',
+                weather: 'Light Rain',
+                temp: '55.0 F (12.8 C)',
+            },
+        ],
+    };
+}
+
+app.use(function (req, res, next) {
+	if(!res.locals.partials) res.locals.partials = {};
+	res.locals.partials.weather = getWeatherData();
+	next();
+})
 
 //配置路由，get方式请求,首页
 app.get('/', function (req, res) {
@@ -57,6 +101,22 @@ app.get('/tours/request-group-rate', function (req, res) {
 	res.render('tours/request-group-rate');
 })
 
+app.get('/jquery-test', function(req, res){
+	res.render('jquery-test');
+});
+
+app.get('/nursery-rhyme', function(req, res){
+	res.render('nursery-rhyme');
+});
+
+app.get('/data/nursery-rhyme', function(req, res){
+	res.json({
+		animal: 'squirrel',
+		bodyPart: 'tail',
+		adjective: 'bushy',
+		noun: 'heck',
+	});
+});
 
 //定制404页面
 //app.use是express添加中间件的一种方式
