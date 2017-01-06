@@ -5,6 +5,10 @@ var app = express();
 //幸运句
 var fortune = require('./lib/fortune.js')
 
+//上传文件，图片
+var formidable = require('formidable');
+
+
 //指定端口号，这样可以在启动服务器前通过设置环境变量覆盖端口
 //如果运行时不时3000，检查一下是否设置了环境变量PORT
 app.set('port', process.env.port || 3000);
@@ -145,6 +149,30 @@ app.post('/process', function (req, res) {
 	}
 })
 
+app.get('/contest/vacation-photo', function(req, res){
+	var now = new Date();
+	res.render('contest/vacation-photo', {
+		year: now.getFullYear(),
+		month: now.getMonth() + 1
+	})
+})
+
+app.post('/contest/vacation-photo/:year/:month', function(req, res){
+	var form = new formidable.IncomingForm();
+	form.parse(req, function (err, fields, files) {
+		if (err) {
+			return res.redirect(303,'/error');
+		}
+
+		console.log('receive fields:');
+		console.log(fields);
+		console.log('receive files:');
+		console.log(files);
+		res.redirect(303,'/thank-you');
+	})
+})
+
+
 //定制404页面
 //app.use是express添加中间件的一种方式
 //要注意顺序，如果把404放在其他页面之前，那么404下面的都匹配不到
@@ -165,6 +193,8 @@ app.use(function (err, req, res, next) {
 	res.status('500');
 	res.render('500');
 })
+
+
 
 app.listen(app.get('port'), function () {
 	console.log('Express started on http://localhost:' + app.get('port') + '; press Ctrl-C to terminate');
