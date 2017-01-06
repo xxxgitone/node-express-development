@@ -14,6 +14,9 @@ app.set('port', process.env.port || 3000);
 //比如在public文件夹下有一个img文件夹，引用里面图片可以直接：/img/logo.png
 app.use(express.static(__dirname + '/public'))
 
+//post提交，解析url编码体
+app.use(require('body-parser')());
+
 // 设置handlebars视图引擎,默认视图为main
 var handlebars = require('express3-handlebars').create({ 
 	defaultLayout: 'main',
@@ -117,6 +120,30 @@ app.get('/data/nursery-rhyme', function(req, res){
 		noun: 'heck',
 	});
 });
+
+app.get('/newsletter', function(req, res){
+	res.render('newsletter', {
+		csrf: 'CSRF token goes here'
+	})
+})
+
+app.post('/process', function (req, res) {
+	// console.log('form (form querystring): ' + req.query.form);
+	// console.log('CSRF token (form hidden form field): ' + req.body._csrf);
+	// console.log('Name (form visible form field): ' + req.body.name);
+	// console.log('Email (form visible form field): ' + req.body.email);
+	// res.redirect(303, '/thank-you');
+	//req.xhr和req.accepts是express提供的两个方便的属性，
+	//如果是ajax请求，xhr是XML HTTP请求的简称，此时req.xhr为true
+	//req.accepts('json,html') === 'json'表示返回的数据的最佳格式为json
+	if (req.xhr || req.accepts('json,html') === 'json') {
+		// 如果发生错误，应该发送{error: 'error description'}
+		res.send({success: true})
+	}else{
+		//如果反生错误，应该重定向到错误页面
+		res.redirect(303, '/thank-you');
+	}
+})
 
 //定制404页面
 //app.use是express添加中间件的一种方式

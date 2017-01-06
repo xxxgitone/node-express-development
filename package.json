@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/xxxgitone/node-express-development#readme",
   "dependencies": {
+    "body-parser": "^1.15.2",
+    "bootstrap": "^3.3.7",
     "express": "^4.14.0",
     "express3-handlebars": "^0.5.2",
     "supervisor": "^0.12.0"
