@@ -8,9 +8,31 @@ var fortune = require('./lib/fortune.js')
 //上传文件，图片
 var formidable = require('formidable');
 
-// cookie密钥
+// cookie密钥,还有其他私密信息
 var credentials = require('./credentials.js');
 
+// //发送邮件
+// var nodemailer = require('nodemailer');
+
+// var mailTransport = nodemailer.createTransport('SMTP',{
+// 	srevice: 'Gmail',
+// 	auth: {
+// 		user: credentials.gmail.user,
+// 		pass: credentials.gmail.password
+// 	}
+// })
+
+
+// mailTransport.sendMail({
+// 	from: '"Meadowlark Travel" <info@,meadowlark.com>',
+// 	to: 'xxxgit@sina.com',
+// 	subject: 'Your Meadowlark Travel Tour',
+// 	text: 'Thank you for booking you trip with Meadowlark Travel.' + 'We look forward to you visited',
+// },function (err) {
+// 	if (err) {
+// 		console.log('Unable to send email: ' + err);
+// 	}
+// })
 
 
 //指定端口号，这样可以在启动服务器前通过设置环境变量覆盖端口
