@@ -1,7 +1,11 @@
+var http = require('http');
 var express = require('express');
+var bodyParser = require('body-parser');
+
 
 var app = express();
 
+var urlencodedParser = bodyParser.urlencoded({ extended: false });
 //幸运句
 var fortune = require('./lib/fortune.js')
 
@@ -225,7 +229,7 @@ app.post('/newsletter', function (req, res) {
 })
 
 // 注册
-// app.post('/process', function (req, res) {
+// app.post('/process', urlencodedParser, function (req, res) {
 // 	// console.log('form (form querystring): ' + req.query.form);
 // 	// console.log('CSRF token (form hidden form field): ' + req.body._csrf);
 // 	// console.log('Name (form visible form field): ' + req.body.name);
@@ -291,8 +295,22 @@ app.use(function (err, req, res, next) {
 	res.render('500');
 })
 
+//日志
+switch(app.get('env')){
+	case 'development':
+		app.use(require('morgan')('dev'));
+		break;
+	case 'production':
+		app.use(require('express-logger')({
+			path:__dirname + '/log/request/log'
+		}));
+		break;
+}
 
+http.createServer(app).listen(app.get('port'), function () {
+	console.log('Express started in ' + app.get('env') +' mode on http://localhost:' + app.get('port') + '; press Ctrl-C to terminate');
+})
 
-app.listen(app.get('port'), function () {
-	console.log('Express started on http://localhost:' + app.get('port') + '; press Ctrl-C to terminate');
-});
+// app.listen(app.get('port'), function () {
+// 	console.log('Express started on http://localhost:' + app.get('port') + '; press Ctrl-C to terminate');
+// });
