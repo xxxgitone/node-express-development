@@ -8,10 +8,22 @@ var fortune = require('./lib/fortune.js')
 //上传文件，图片
 var formidable = require('formidable');
 
+// cookie密钥
+var credentials = require('./credentials.js');
+
+
 
 //指定端口号，这样可以在启动服务器前通过设置环境变量覆盖端口
 //如果运行时不时3000，检查一下是否设置了环境变量PORT
 app.set('port', process.env.port || 3000);
+
+//生成cookie密钥
+app.use(require('cookie-parser')(credentials.cookieSecret));
+app.use(require('express-session')({
+    resave: false,
+    saveUninitialized: false,
+    secret: credentials.cookieSecret,
+}));
 
 //static中间件可以将一个或者多个目录指派为包含静态资源的目录，其中资源不经过任何特殊处理直接发送到客户端
 //可以在里面放图片、css文件、客户端javascript文件之类的资源
@@ -20,6 +32,14 @@ app.use(express.static(__dirname + '/public'))
 
 //post提交，解析url编码体
 app.use(require('body-parser')());
+
+//flash即时消息
+app.use(function (req, res, next) {
+	//如果有即时消息，把它传到上下文，然后请出它
+	res.locals.flash = req.session.flash;
+	delete req.session.flash;
+	next();
+})
 
 // 设置handlebars视图引擎,默认视图为main
 var handlebars = require('express3-handlebars').create({ 
@@ -125,29 +145,81 @@ app.get('/data/nursery-rhyme', function(req, res){
 	});
 });
 
-app.get('/newsletter', function(req, res){
-	res.render('newsletter', {
-		csrf: 'CSRF token goes here'
-	})
+app.get('/thank-you', function (req, res) {
+	res.render('thank-you');
 })
 
-app.post('/process', function (req, res) {
-	// console.log('form (form querystring): ' + req.query.form);
-	// console.log('CSRF token (form hidden form field): ' + req.body._csrf);
-	// console.log('Name (form visible form field): ' + req.body.name);
-	// console.log('Email (form visible form field): ' + req.body.email);
-	// res.redirect(303, '/thank-you');
-	//req.xhr和req.accepts是express提供的两个方便的属性，
-	//如果是ajax请求，xhr是XML HTTP请求的简称，此时req.xhr为true
-	//req.accepts('json,html') === 'json'表示返回的数据的最佳格式为json
-	if (req.xhr || req.accepts('json,html') === 'json') {
-		// 如果发生错误，应该发送{error: 'error description'}
-		res.send({success: true})
-	}else{
-		//如果反生错误，应该重定向到错误页面
-		res.redirect(303, '/thank-you');
-	}
+app.get('/newsletter', function(req, res){
+	// res.render('newsletter', {
+	// 	csrf: 'CSRF token goes here'
+	// })
+	res.render('newsletter');
 })
+
+// for now, we're mocking NewsletterSignup:
+function NewsletterSignup(){
+}
+NewsletterSignup.prototype.save = function(cb){
+	cb();
+};
+
+var VALID_EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+
+//假设订阅简报
+app.post('/newsletter', function (req, res) {
+	var name = req.body.name || '', email = req.body.email || '';
+	if (! email.match(VALID_EMAIL_REGEX)) {
+		if (req.xhr) {
+			return res.json({
+				error: 'Invalid name email address'
+			})
+		};
+		req.session.flash = {
+				type: 'danger',
+				intro: 'Validation error',
+				message: 'The email address you entered was not valid'
+		};
+		return res.res.redirect(303, '/newsletter/archive');
+	}
+	new NewsletterSignup({ name: name, email: email }).save(function(err){
+		if(err) {
+			if(req.xhr) return res.json({ error: 'Database error.' });
+			req.session.flash = {
+				type: 'danger',
+				intro: 'Database error!',
+				message: 'There was a database error; please try again later.',
+			};
+			return res.redirect(303, '/newsletter/archive');
+		}
+		if(req.xhr) return res.json({ success: true });
+		req.session.flash = {
+			type: 'success',
+			intro: 'Thank you!',
+			message: 'You have now been signed up for the newsletter.',
+		};
+		return res.redirect(303, '/newsletter/archive');
+	});
+})
+
+// 注册
+// app.post('/process', function (req, res) {
+// 	// console.log('form (form querystring): ' + req.query.form);
+// 	// console.log('CSRF token (form hidden form field): ' + req.body._csrf);
+// 	// console.log('Name (form visible form field): ' + req.body.name);
+// 	// console.log('Email (form visible form field): ' + req.body.email);
+// 	// res.redirect(303, '/thank-you');
+// 	//req.xhr和req.accepts是express提供的两个方便的属性，
+// 	//如果是ajax请求，xhr是XML HTTP请求的简称，此时req.xhr为true
+// 	//req.accepts('json,html') === 'json'表示返回的数据的最佳格式为json
+// 	if (req.xhr || req.accepts('json,html') === 'json') {
+// 		// 如果发生错误，应该发送{error: 'error description'}
+// 		res.send({success: true})
+// 	}else{
+// 		//如果反生错误，应该重定向到错误页面
+// 		res.redirect(303, '/thank-you');
+// 	}
+// })
 
 app.get('/contest/vacation-photo', function(req, res){
 	var now = new Date();
@@ -172,6 +244,9 @@ app.post('/contest/vacation-photo/:year/:month', function(req, res){
 	})
 })
 
+app.get('/newsletter/archive', function (req, res) {
+	res.render('newsletter/archive');
+})
 
 //定制404页面
 //app.use是express添加中间件的一种方式
