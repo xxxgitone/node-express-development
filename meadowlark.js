@@ -2,6 +2,8 @@ var http = require('http');
 var express = require('express');
 var bodyParser = require('body-parser');
 
+var Vacation = require('./models/vacation.js');
+
 
 var app = express();
 
@@ -57,7 +59,78 @@ app.use(require('express-session')({
 app.use(express.static(__dirname + '/public'))
 
 //post提交，解析url编码体
-app.use(require('body-parser')());
+//app.use(require('body-parser')());
+
+var mongoose = require('mongoose');
+var opts = {
+	server: {
+		socketOptions:{
+			keepAlive: 1
+		}
+	}
+};
+
+switch(app.get('env')){
+	case 'development':
+		mongoose.connect(credentials.mongo.development.connectionString, opts);
+		break;
+	case 'production'
+		mongoose.connect(credentials.mongo.development.connectionString, opts);
+		break;
+	default:
+	 throw new Error('Unknow execution environment: ' + app.get('env'));
+};
+
+// initialize vacations
+Vacation.find(function(err, vacations){
+    if(vacations.length) return;
+
+    new Vacation({
+        name: 'Hood River Day Trip',
+        slug: 'hood-river-day-trip',
+        category: 'Day Trip',
+        sku: 'HR199',
+        description: 'Spend a day sailing on the Columbia and ' + 
+            'enjoying craft beers in Hood River!',
+        priceInCents: 9995,
+        tags: ['day trip', 'hood river', 'sailing', 'windsurfing', 'breweries'],
+        inSeason: true,
+        maximumGuests: 16,
+        available: true,
+        packagesSold: 0,
+    }).save();
+
+    new Vacation({
+        name: 'Oregon Coast Getaway',
+        slug: 'oregon-coast-getaway',
+        category: 'Weekend Getaway',
+        sku: 'OC39',
+        description: 'Enjoy the ocean air and quaint coastal towns!',
+        priceInCents: 269995,
+        tags: ['weekend getaway', 'oregon coast', 'beachcombing'],
+        inSeason: false,
+        maximumGuests: 8,
+        available: true,
+        packagesSold: 0,
+    }).save();
+
+    new Vacation({
+        name: 'Rock Climbing in Bend',
+        slug: 'rock-climbing-in-bend',
+        category: 'Adventure',
+        sku: 'B99',
+        description: 'Experience the thrill of rock climbing in the high desert.',
+        priceInCents: 289995,
+        tags: ['weekend getaway', 'bend', 'high desert', 'rock climbing', 'hiking', 'skiing'],
+        inSeason: true,
+        requiresWaiver: true,
+        maximumGuests: 4,
+        available: false,
+        packagesSold: 0,
+        notes: 'The tour guide is currently recovering from a skiing accident.',
+    }).save();
+});
+
 
 //flash即时消息
 app.use(function (req, res, next) {
@@ -246,6 +319,26 @@ app.post('/newsletter', function (req, res) {
 // 		res.redirect(303, '/thank-you');
 // 	}
 // })
+
+app.get('/vacations', function(req, res){
+    Vacation.find({ available: true }, function(err, vacations){
+        var context = {
+            currency: currency,
+            vacations: vacations.map(function(vacation){
+                return {
+                    sku: vacation.sku,
+                    name: vacation.name,
+                    description: vacation.description,
+                    inSeason: vacation.inSeason,
+                    price: convertFromUSD(vacation.priceInCents/100, currency),
+                    qty: vacation.qty,
+                };
+            })
+        };
+        res.render('vacations', context);
+    });
+});
+
 
 app.get('/contest/vacation-photo', function(req, res){
 	var now = new Date();
